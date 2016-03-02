@@ -156,18 +156,18 @@ const (
 )
 
 type EmitState struct {
-	op				int // MARSHAL, UNMARSHAL
-	nextIdx			int
-	staticOffset	int
-	alenIdx			int
-	curBSize		int
-    blen            int
-	bigEndian		bool // TODO:  This is duplicated now... integrate better.
-	tmp32exists		bool
-	tmp64exists		bool
-	contiguous		[]int
-	crt				int
-	resetBuffer		bool
+	op           int // MARSHAL, UNMARSHAL
+	nextIdx      int
+	staticOffset int
+	alenIdx      int
+	curBSize     int
+	blen         int
+	bigEndian    bool // TODO:  This is duplicated now... integrate better.
+	tmp32exists  bool
+	tmp64exists  bool
+	contiguous   []int
+	crt          int
+	resetBuffer  bool
 }
 
 func (es *EmitState) getNewAlen() string {
@@ -259,12 +259,11 @@ func ilUint64Out(b string, offset int, target string, es *EmitState) string {
 		tmp64, b, offset, target, b, offset+1, target, b, offset+2, target, b, offset+3, target, b, offset+4, target, b, offset+5, target, b, offset+6, target, b, offset+7, target)
 }
 
-
 var inlineEncode map[string]encodefunc = map[string]encodefunc{
 	"byte":   ilByteOut,
 	"uint16": ilUint16Out,
 	"uint32": ilUint32Out,
-    "uint64": ilUint64Out,
+	"uint64": ilUint64Out,
 }
 
 type decodefunc func(string, int, *EmitState) string
@@ -293,7 +292,6 @@ func ilUint64(b string, offset int, es *EmitState) string {
 	}
 	return fmt.Sprintf("(uint64(%s[%d]) | (uint64(%s[%d]) << 8)  | (uint64(%s[%d]) << 16) | (uint64(%s[%d]) << 24) | (uint64(%s[%d]) << 32) | (uint64(%s[%d]) << 40)  | (uint64(%s[%d]) << 48) | (uint64(%s[%d]) << 56))", b, offset, b, offset+1, b, offset+2, b, offset+3, b, offset+4, b, offset+5, b, offset+6, b, offset+7)
 }
-
 
 var inlineDecode map[string]decodefunc = map[string]decodefunc{
 	"byte":   ilByte,
@@ -352,15 +350,15 @@ func walkOne(b io.Writer, f *ast.Field, pred string, funcname string, fn func(io
 				fmt.Fprintf(b, "if err != nil {\n")
 				fmt.Fprintf(b, "return err\n")
 				fmt.Fprintf(b, "}\n")
-                if se, ok := s.Elt.(*ast.SelectorExpr); ok {
-                    fmt.Fprintf(b, "%s = make([]%s.%s, %s)\n", pred, se.X, se.Sel, alenid)
-                } else {
-                    fmt.Fprintf(b, "%s = make([]%s, %s)\n", pred, s.Elt, alenid)
-                }
+				if se, ok := s.Elt.(*ast.SelectorExpr); ok {
+					fmt.Fprintf(b, "%s = make([]%s.%s, %s)\n", pred, se.X, se.Sel, alenid)
+				} else {
+					fmt.Fprintf(b, "%s = make([]%s, %s)\n", pred, s.Elt, alenid)
+				}
 			} else {
 				//setbs(b, 10, es, false)
 				fmt.Fprintf(b, "bs = b[:]\n")
-                es.curBSize = es.blen
+				es.curBSize = es.blen
 				fmt.Fprintf(b, "%s := int64(len(%s))\n", alenid, pred)
 				fmt.Fprintf(b, "if wlen := binary.PutVarint(bs, %s); wlen >= 0 {\n", alenid)
 				fmt.Fprintf(b, "wire.Write(b[0:wlen])\n")
@@ -397,13 +395,13 @@ func walkOne(b io.Writer, f *ast.Field, pred string, funcname string, fn func(io
 }
 
 type StructInfo struct {
-	size			int
-	maxSize			int
-	maxContiguous	int
-	contiguous		[]int
-	varLen			bool
-	mustDispatch	bool
-	totalSize		int // Including embedded types, if known
+	size          int
+	maxSize       int
+	maxContiguous int
+	contiguous    []int
+	varLen        bool
+	mustDispatch  bool
+	totalSize     int // Including embedded types, if known
 }
 
 var structInfoMap map[string]*StructInfo
@@ -444,7 +442,7 @@ func analyze(n interface{}) (info *StructInfo) {
 	case *ast.StructType:
 		st := n.(*ast.StructType)
 		for _, field := range st.Fields.List {
-			for _ = range field.Names {
+			for range field.Names {
 				mergeInfo(info, analyze(field), 1)
 			}
 		}
@@ -521,7 +519,6 @@ func analyzeType(typeName string) (info *StructInfo) {
 		}
 	}
 	panic("Can't handle decl: " + typeName)
-	return
 }
 
 func (bi *Binidl) structmap(out io.Writer, ts *ast.TypeSpec) {
@@ -553,7 +550,7 @@ func (bi *Binidl) structmap(out io.Writer, ts *ast.TypeSpec) {
 	fmt.Fprintf(out, "  mu sync.Mutex\n")
 	fmt.Fprintf(out, "  cache []*%s\n", typeName)
 	fmt.Fprintf(out, "}\n\n")
-    fmt.Fprintf(out, "func New%sCache() *%sCache {\nc := &%sCache{}\nc.cache = make([]*%s, 0)\nreturn c\n}\n\n", typeName, typeName, typeName, typeName)
+	fmt.Fprintf(out, "func New%sCache() *%sCache {\nc := &%sCache{}\nc.cache = make([]*%s, 0)\nreturn c\n}\n\n", typeName, typeName, typeName, typeName)
 
 	fmt.Fprintf(out, "func (p *%sCache) Get() *%s {\n", typeName, typeName)
 	fmt.Fprintf(out, "var t *%s\n", typeName)
@@ -580,10 +577,10 @@ func (bi *Binidl) structmap(out io.Writer, ts *ast.TypeSpec) {
 		blen = 10
 	}
 
-   	mes := &EmitState{bigEndian: bi.bigEndian, op: MARSHAL, contiguous: info.contiguous, blen: blen}
+	mes := &EmitState{bigEndian: bi.bigEndian, op: MARSHAL, contiguous: info.contiguous, blen: blen}
 
 	fmt.Fprintf(out, "func (t *%s) Marshal(wire io.Writer) {\n", typeName)
-	if (blen > 0) {
+	if blen > 0 {
 		fmt.Fprintf(out, "var b [%d]byte\n", blen)
 		fmt.Fprintf(out, "var bs []byte\n")
 		mes.curBSize = 0
@@ -640,13 +637,13 @@ func (bf *Binidl) PrintGo() {
 	defer os.Remove(tfname)
 	defer tf.Close()
 
-    defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("Panic when parsing generated output: ", r)
-            fmt.Println("Generated output in temporary file ", tfname)
-            os.Exit(-1)
-        }
-    }()
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Panic when parsing generated output: ", r)
+			fmt.Println("Generated output in temporary file ", tfname)
+			os.Exit(-1)
+		}
+	}()
 
 	fmt.Fprintln(tf, "package", bf.ast.Name.Name)
 	imports := []string{"io", "sync"}
